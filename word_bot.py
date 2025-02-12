@@ -1,6 +1,7 @@
+import os
+import pandas as pd
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import pandas as pd
 
 # Хранилище для слов
 word_pairs = []
@@ -40,18 +41,28 @@ async def export_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Основная функция
 def main():
-    # Вставьте токен вашего бота
-    token = "7571220154:AAGtl3TOUFLViAsCEHvEt4t8XZd8EoZjPjY"
+    # Читаем токен из переменной окружения
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise ValueError("❌ Ошибка: BOT_TOKEN не задан!")
 
-    # Создание приложения
+    port = int(os.environ.get("PORT", 8443))  # Порт, который использует Render
+
+    # Создаем приложение
     app = ApplicationBuilder().token(token).build()
 
     # Добавляем обработчики
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app.add_handler(CommandHandler("export", export_csv))
 
-    # Запуск бота
-    app.run_polling()
+    # Включаем Webhook вместо Polling
+    webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'wordcollector.onrender.com')}/{token}"
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=token,
+        webhook_url=webhook_url
+    )
 
 if __name__ == "__main__":
     main()
